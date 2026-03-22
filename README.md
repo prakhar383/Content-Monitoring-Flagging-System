@@ -5,17 +5,21 @@ A Django REST API that scans content for keyword matches, scores them
 by relevance, and manages a human review workflow with intelligent
 suppression logic.
 
+> **Content Source:** This project uses a local mock JSON dataset
+> (`monitor/mock_data.json`). No external API keys are required.
+> The project runs fully offline out of the box.
+
 ---
 
 ## Tech Stack
 
-| Layer        | Technology                  |
-|--------------|-----------------------------|
-| Language     | Python 3.13                 |
-| Framework    | Django 5.x                  |
-| API Layer    | Django REST Framework        |
-| Database     | SQLite (local development)  |
-| Data Source  | Mock JSON dataset            |
+| Layer        | Technology                 |
+|--------------|----------------------------|
+| Language     | Python 3.13                |
+| Framework    | Django 5.x                 |
+| API Layer    | Django REST Framework       |
+| Database     | SQLite (local development) |
+| Data Source  | Mock JSON dataset           |
 
 ---
 
@@ -57,15 +61,35 @@ Server starts at → http://127.0.0.1:8000
 
 ---
 
+## Running Tests
+```bash
+python manage.py test monitor
+```
+
+Expected output:
+```
+Found 21 tests...
+.....................
+----------------------------------------------------------------------
+Ran 21 tests in 0.070s
+
+OK
+```
+
+Tests cover scoring logic, suppression rules, all API endpoints,
+and the full scan integration flow.
+
+---
+
 ## API Endpoints
 
-| Method | Endpoint           | Description                        |
-|--------|--------------------|------------------------------------|
-| POST   | /api/keywords/     | Create a new keyword               |
-| GET    | /api/keywords/     | List all keywords                  |
-| POST   | /api/scan/         | Trigger a full content scan        |
-| GET    | /api/flags/        | List all flags (supports filtering)|
-| PATCH  | /api/flags/{id}/   | Update flag status (reviewer)      |
+| Method | Endpoint           | Description                         |
+|--------|--------------------|-------------------------------------|
+| POST   | /api/keywords/     | Create a new keyword                |
+| GET    | /api/keywords/     | List all keywords                   |
+| POST   | /api/scan/         | Trigger a full content scan         |
+| GET    | /api/flags/        | List all flags (supports filtering) |
+| PATCH  | /api/flags/{id}/   | Update flag status (reviewer)       |
 
 ---
 
@@ -93,6 +117,19 @@ curl -X POST http://127.0.0.1:8000/api/keywords/ \
 ### 2. Trigger a scan
 ```bash
 curl -X POST http://127.0.0.1:8000/api/scan/
+```
+
+Expected response:
+```json
+{
+  "message": "Scan completed successfully.",
+  "results": {
+    "keywords_scanned": 4,
+    "articles_scanned": 6,
+    "flags_created": 7,
+    "flags_suppressed": 0
+  }
+}
 ```
 
 ### 3. View all flags
@@ -123,7 +160,19 @@ curl -X PATCH http://127.0.0.1:8000/api/flags/2/ \
 ### 6. Scan again — suppression kicks in
 ```bash
 curl -X POST http://127.0.0.1:8000/api/scan/
-# flags_suppressed will be > 0 now
+```
+
+Expected response after marking flags irrelevant:
+```json
+{
+  "message": "Scan completed successfully.",
+  "results": {
+    "keywords_scanned": 4,
+    "articles_scanned": 6,
+    "flags_created": 0,
+    "flags_suppressed": 1
+  }
+}
 ```
 
 ---
@@ -157,11 +206,11 @@ If a flag is marked **irrelevant** by a reviewer:
 
 This logic lives in `monitor/services.py → ScanService.should_suppress()`.
 ```
-Flag = irrelevant?
+Flag marked irrelevant?
   └── YES → article updated after review?
-              └── YES → show again (content changed)
-              └── NO  → suppress (same old article)
-  └── NO  → never suppress
+              └── YES → resurface as pending (content changed)
+              └── NO  → suppress (same old article, skip it)
+  └── NO  → never suppress (pending/relevant always show)
 ```
 
 ---
@@ -185,6 +234,7 @@ FlagEngine/
 │   ├── services.py          # scan logic, scoring, suppression
 │   ├── urls.py              # app-level URL patterns
 │   ├── admin.py             # models registered for admin panel
+│   ├── tests.py             # 21 automated tests
 │   └── mock_data.json       # sample content dataset
 │
 ├── .gitignore
@@ -217,3 +267,6 @@ FlagEngine/
 
 - **Service layer** — all business logic lives in `services.py`, not
   in views. Views are kept thin — they only handle HTTP in/out.
+
+- **Ordered by score** — `GET /flags/` returns results ordered by score
+  descending so reviewers always see the highest confidence matches first.
