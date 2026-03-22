@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Learn Django Fast",
+    "body": "Django is a powerful Python web framework used for building APIs and web applications rapidly.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  },
+  {
+    "title": "Python Automation Scripts",
+    "body": "Automate repetitive tasks using Python. Learn how to write automation scripts from scratch.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  },
+  {
+    "title": "Cooking Tips for Beginners",
+    "body": "Best recipes and cooking techniques for people who are new to the kitchen.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  },
+  {
+    "title": "Building a Data Pipeline",
+    "body": "A data pipeline moves and transforms data between systems. Learn the core concepts here.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  },
+  {
+    "title": "Top Automation Tools in 2026",
+    "body": "From CI/CD to RPA, here are the best automation tools for modern software teams.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  },
+  {
+    "title": "Weekend Travel Guide",
+    "body": "Explore beautiful destinations for a quick weekend getaway. Tips on hotels and food.",
+    "source": "mock",
+    "last_updated": "2026-03-20T10:00:00Z"
+  }
+]
