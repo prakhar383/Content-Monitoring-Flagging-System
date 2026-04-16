@@ -2,6 +2,8 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Keyword, Flag
 from .serializers import (
@@ -17,11 +19,14 @@ from .services import ScanService
 # POST /api/keywords/  → create a keyword
 # ------------------------------------------------------------------ #
 class KeywordListView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        keywords   = Keyword.objects.all()
-        serializer = KeywordSerializer(keywords, many=True)
-        return Response(serializer.data)
+        keywords   = Keyword.objects.all().order_by('name')
+        paginator = PageNumberPagination()
+        paginated_data = paginator.paginate_queryset(keywords, request)
+        serializer = KeywordSerializer(paginated_data, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = KeywordSerializer(data=request.data)
@@ -41,6 +46,7 @@ class KeywordListView(APIView):
 # POST /api/scan/  → trigger a full scan
 # ------------------------------------------------------------------ #
 class ScanView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         results = ScanService.run_scan()
@@ -54,6 +60,7 @@ class ScanView(APIView):
 # GET /api/flags/  → list all flags
 # ------------------------------------------------------------------ #
 class FlagListView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # Allow filtering by status e.g. /api/flags/?status=pending
@@ -69,14 +76,17 @@ class FlagListView(APIView):
         # Order by score descending — highest confidence matches first
         flags = flags.order_by('-score')
 
-        serializer = FlagSerializer(flags, many=True)
-        return Response(serializer.data)
+        paginator = PageNumberPagination()
+        paginated_data = paginator.paginate_queryset(flags, request)
+        serializer = FlagSerializer(paginated_data, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 # ------------------------------------------------------------------ #
 # PATCH /api/flags/{id}/  → reviewer updates flag status
 # ------------------------------------------------------------------ #
 class FlagDetailView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
         # Try to find the flag — return 404 if it doesn't exist

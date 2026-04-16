@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.utils import timezone
+from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from datetime import datetime, timedelta
 
@@ -140,6 +141,8 @@ class KeywordAPITest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.force_authenticate(user=self.user)
 
     def test_create_keyword_success(self):
         response = self.client.post(
@@ -175,7 +178,7 @@ class KeywordAPITest(TestCase):
         Keyword.objects.create(name="django")
         response = self.client.get("/api/keywords/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data["results"]), 2)
 
 
 # ================================================================ #
@@ -188,6 +191,8 @@ class FlagAPITest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.force_authenticate(user=self.user)
         self.keyword = Keyword.objects.create(name="python")
         self.content = ContentItem.objects.create(
             title="Python Guide",
@@ -205,16 +210,16 @@ class FlagAPITest(TestCase):
     def test_list_flags(self):
         response = self.client.get("/api/flags/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data["results"]), 1)
 
     def test_filter_flags_by_status(self):
         response = self.client.get("/api/flags/?status=pending")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data["results"]), 1)
 
         response = self.client.get("/api/flags/?status=relevant")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.data["results"]), 0)
 
     def test_patch_flag_to_relevant(self):
         response = self.client.patch(
@@ -270,6 +275,8 @@ class ScanIntegrationTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.force_authenticate(user=self.user)
 
     def test_scan_creates_flags(self):
         Keyword.objects.create(name="python")

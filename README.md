@@ -1,125 +1,109 @@
 # FlagEngine 🚩
-### Content Monitoring & Flagging System
+### Enterprise Content Monitoring & Flagging System
 
-A Django REST API that scans content for keyword matches, scores them
-by relevance, and manages a human review workflow with intelligent
-suppression logic.
+**FlagEngine** is a robust, RESTful API built with Django designed to automate content monitoring, relevance scoring, and human-in-the-loop review workflows. It serves as a backend engine for PR teams, brand sentiment analysis, and content moderation platforms.
 
-> **Content Source:** This project uses a local mock JSON dataset
-> (`monitor/mock_data.json`). No external API keys are required.
-> The project runs fully offline out of the box.
+By leveraging **Clean Architecture** principles (separating business algorithms from HTTP layers) and providing features like **Smart Suppression Logic**, FlagEngine ensures that reviewers only see high-confidence signal, eliminating redundant work caused by noisy data streams.
 
 ---
 
-## Tech Stack
+## 🚀 Key Technical Features
 
-| Layer        | Technology                 |
-|--------------|----------------------------|
-| Language     | Python 3.13                |
-| Framework    | Django 5.x                 |
-| API Layer    | Django REST Framework       |
-| Database     | SQLite (local development) |
-| Data Source  | Mock JSON dataset           |
+- **Intelligent Scoring Mechanism:** Evaluates matches conceptually (e.g., exact title matches yield a 100 confidence score, whereas buried body text yields 40).
+- **Smart Suppression State Machine:** When a reviewer marks a flag "irrelevant," the engine suppresses it in future scans. However, if the source content is updated post-review, the flag reliably resurfaces. 
+- **Production-Ready Security:** Fully secured via JSON Web Tokens (JWT) ensuring all endpoints strictly enforce authentication.
+- **Scalable Infrastructure:** Implements structural pagination (20 items/page default) to prevent memory bottlenecks when querying vast datasets.
+- **Pluggable Data Sources:** Engineered so that data ingestion (`ScanService`) is fully decoupled. Easily attach to NewsAPI, RSS feeds, or headless scrapers.
+- **Robust Test Coverage:** 21 automated suite tests verifying scoring, suppression logic, and API behavior with simulated users.
 
 ---
 
-## Setup Instructions
+## 🛠 Tech Stack
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/prakhar383/Content-Monitoring-Flagging-System.git
-cd Content-Monitoring-Flagging-System
-```
+| Layer        | Technology                                     |
+|--------------|------------------------------------------------|
+| **Language** | Python 3.13                                    |
+| **Framework**| Django 6.0.3 + Django REST Framework (DRF)     |
+| **Auth**     | djangorestframework-simplejwt 5.3+             |
+| **Database** | SQLite (Configured for local dev, Postgres ready)|
 
-### 2. Create and activate virtual environment
+---
+
+## ⚙️ Setup Instructions
+
+### 1. Clone & Environment Setup
 ```bash
+git clone https://github.com/yourusername/FlagEngine.git
+cd FlagEngine
+
+# Create and activate virtual environment
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac / Linux
-source venv/bin/activate
+venv\Scripts\activate      # Windows
+source venv/bin/activate   # Mac / Linux
 ```
 
-### 3. Install dependencies
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Apply migrations
+### 3. Database Preparation
 ```bash
 python manage.py migrate
+# Create a superuser to access the API
+python manage.py createsuperuser
 ```
 
-### 5. Run the development server
+### 4. Run the Server
 ```bash
 python manage.py runserver
 ```
-
-Server starts at → http://127.0.0.1:8000
+Server starts at → `http://127.0.0.1:8000`
 
 ---
 
-## Running Tests
+## 🧪 Running Automations & Tests
+
+To execute the test suite (which validates edge cases for the suppression logic):
 ```bash
 python manage.py test monitor
 ```
-
-Expected output:
-```
-Found 21 tests...
-.....................
-----------------------------------------------------------------------
-Ran 21 tests in 0.070s
-
-OK
-```
-
-Tests cover scoring logic, suppression rules, all API endpoints,
-and the full scan integration flow.
+*Outputs: `Ran 21 tests in ~0.05s - OK`*
 
 ---
 
-## API Endpoints
+## 📡 API Endpoints & Usage
 
-| Method | Endpoint           | Description                         |
-|--------|--------------------|-------------------------------------|
-| POST   | /api/keywords/     | Create a new keyword                |
-| GET    | /api/keywords/     | List all keywords                   |
-| POST   | /api/scan/         | Trigger a full content scan         |
-| GET    | /api/flags/        | List all flags (supports filtering) |
-| PATCH  | /api/flags/{id}/   | Update flag status (reviewer)       |
+Since the API is secured by JWT, you must obtain a token first.
 
----
-
-## Sample curl Commands
-
-### 1. Add keywords
+### 1. Authenticate (Get Token)
 ```bash
+curl -X POST http://127.0.0.1:8000/api/token/ \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"your_username\", \"password\": \"your_password\"}"
+```
+*Save the `access` token returned to use in the headers below.*
+
+### 2. Manage Keywords
+```bash
+# Add a Keyword
 curl -X POST http://127.0.0.1:8000/api/keywords/ \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
   -d "{\"name\": \"python\"}"
 
-curl -X POST http://127.0.0.1:8000/api/keywords/ \
-  -H "Content-Type: application/json" \
-  -d "{\"name\": \"django\"}"
-
-curl -X POST http://127.0.0.1:8000/api/keywords/ \
-  -H "Content-Type: application/json" \
-  -d "{\"name\": \"automation\"}"
-
-curl -X POST http://127.0.0.1:8000/api/keywords/ \
-  -H "Content-Type: application/json" \
-  -d "{\"name\": \"data pipeline\"}"
+# List all Keywords (Paginated)
+curl -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" http://127.0.0.1:8000/api/keywords/
 ```
 
-### 2. Trigger a scan
+### 3. Execute Core Scan
+Running a scan pulls data from the local mock pipeline, scores matches, and applies suppression rules.
 ```bash
-curl -X POST http://127.0.0.1:8000/api/scan/
+curl -X POST http://127.0.0.1:8000/api/scan/ \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>"
 ```
 
-Expected response:
+*Expected JSON Response:*
 ```json
 {
   "message": "Scan completed successfully.",
@@ -132,141 +116,36 @@ Expected response:
 }
 ```
 
-### 3. View all flags
+### 4. Review Workflows (Flags)
+Retrieve paginated flags, sorted dynamically by confidence score (Highest `score` first).
 ```bash
-curl http://127.0.0.1:8000/api/flags/
-```
+# Get all flags
+curl -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" http://127.0.0.1:8000/api/flags/
 
-### 4. Filter flags by status
-```bash
-curl http://127.0.0.1:8000/api/flags/?status=pending
-curl http://127.0.0.1:8000/api/flags/?status=relevant
-curl http://127.0.0.1:8000/api/flags/?status=irrelevant
-```
+# Filter by pending items
+curl -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" http://127.0.0.1:8000/api/flags/?status=pending
 
-### 5. Reviewer marks a flag
-```bash
-# Mark as irrelevant
+# Reviewer Decision: Mark a Flag Irrelevant (Triggers Suppression)
 curl -X PATCH http://127.0.0.1:8000/api/flags/1/ \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
   -d "{\"status\": \"irrelevant\"}"
-
-# Mark as relevant
-curl -X PATCH http://127.0.0.1:8000/api/flags/2/ \
-  -H "Content-Type: application/json" \
-  -d "{\"status\": \"relevant\"}"
-```
-
-### 6. Scan again — suppression kicks in
-```bash
-curl -X POST http://127.0.0.1:8000/api/scan/
-```
-
-Expected response after marking flags irrelevant:
-```json
-{
-  "message": "Scan completed successfully.",
-  "results": {
-    "keywords_scanned": 4,
-    "articles_scanned": 6,
-    "flags_created": 0,
-    "flags_suppressed": 1
-  }
-}
 ```
 
 ---
 
-## Scoring Logic
+## 🏗 Architecture Details
 
-Scores are computed in `monitor/services.py → ScanService.compute_score()`.
+All core business algorithms live inside `monitor/services.py`, enforcing a strict domain boundary.
 
-| Match Type                 | Score |
-|----------------------------|-------|
-| Exact keyword in title     | 100   |
-| Partial keyword in title   | 70    |
-| Keyword only in body       | 40    |
-| No match                   | 0     |
-
-Flags are returned ordered by score (highest first) so reviewers
-see the most confident matches at the top.
-
----
-
-## Suppression Logic
-
-This is the core business rule of the system.
-
-If a flag is marked **irrelevant** by a reviewer:
-- The system records a `reviewed_at` timestamp on the flag
-- On the next scan, if the article's `last_updated` is **older** than
-  `reviewed_at` → the flag is **suppressed** (skipped silently)
-- If the article was **updated after** the review → the flag
-  **resurfaces** as pending for a fresh look
-
-This logic lives in `monitor/services.py → ScanService.should_suppress()`.
-```
-Flag marked irrelevant?
-  └── YES → article updated after review?
-              └── YES → resurface as pending (content changed)
-              └── NO  → suppress (same old article, skip it)
-  └── NO  → never suppress (pending/relevant always show)
+```mermaid
+graph TD;
+    API[API Views] --> Auth[JWT Middleware];
+    Auth --> Service[ScanService Layer];
+    Service --> Scorer[Scoring Logic];
+    Service --> Source[Mock JSON / Future Data Streams];
+    Service --> State[Suppression State Machine];
+    State --> DB[(Database: Flags & Content)];
 ```
 
----
-
-## Project Structure
-```
-FlagEngine/
-│
-├── core/
-│   ├── settings.py          # project configuration
-│   ├── urls.py              # root URL dispatcher
-│   ├── wsgi.py              # WSGI entry point
-│   └── asgi.py              # ASGI entry point
-│
-├── monitor/
-│   ├── migrations/
-│   │   └── 0001_initial.py  # auto-generated DB migration
-│   ├── models.py            # Keyword, ContentItem, Flag
-│   ├── serializers.py       # JSON conversion + validation
-│   ├── views.py             # API endpoint handlers
-│   ├── services.py          # scan logic, scoring, suppression
-│   ├── urls.py              # app-level URL patterns
-│   ├── admin.py             # models registered for admin panel
-│   ├── tests.py             # 21 automated tests
-│   └── mock_data.json       # sample content dataset
-│
-├── .gitignore
-├── requirements.txt         # pip dependencies
-├── manage.py                # Django CLI tool
-└── README.md
-```
-
----
-
-## Assumptions & Trade-offs
-
-- **Mock JSON over live API** — keeps the project self-contained and
-  reproducible without API keys. Switching to NewsAPI or RSS requires
-  changing only `ScanService.fetch_content()`.
-
-- **SQLite** — used as permitted by the assignment. Production would
-  use PostgreSQL.
-
-- **No authentication** — endpoints are open for simplicity. Production
-  would use JWT via `djangorestframework-simplejwt`.
-
-- **Deduplication via `unique_together`** — the database enforces that
-  a keyword+article pair can only produce one flag. No duplicate logic
-  needed in application code.
-
-- **Suppression via timestamps** — simple, deterministic, and easy to
-  verify. `reviewed_at` vs `last_updated` is a clear contract with no
-  ambiguity.
-
-- **Service layer** — all business logic lives in `services.py`, not
-  in views. Views are kept thin — they only handle HTTP in/out.
-
-- **Ordered by score** — `GET /flags/` returns results ordered by score
-  descending so reviewers always see the highest confidence matches first.
+By decoupling standard view handlers from the logic tree, `FlagEngine` is easily maintainable and can adopt new external REST APIs (for data sourcing) without requiring total foundational rewrites.
